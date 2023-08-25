@@ -15,8 +15,6 @@ start:
   call setup_page_tables
   call enable_paging
 
-  call disable_cursor
-
   lgdt [gdt64.pointer]
 
   jmp gdt64.code:long_mode_start
@@ -144,26 +142,6 @@ error:
   mov dword [0xb8008], 0x4f204f20
   mov byte  [0xb800a], al
   hlt
-
-disable_cursor:
-  ; Disable cursor
-  pushf
-  push eax
-  push edx
-
-  mov dx, 0x3D4
-  mov al, 0xA
-  out dx, al
-
-  inc dx
-  mov al, 0x20
-  out dx, al
-
-  pop edx
-  pop eax
-  popf
-
-  ret
 
 section .bss
 align 4096

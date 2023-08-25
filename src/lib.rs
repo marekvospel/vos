@@ -17,7 +17,8 @@ pub extern "C" fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
-    vga::clear_screen();
+    vga::text::clear_screen();
+    vga::cursor::disable_cursor();
 
     println!("Starting VOS...");
 
@@ -44,8 +45,8 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
         );
     }
 
-    // Unimplemented
-    format!("Hi");
-
-    loop {}
+    loop {
+        vga::cursor::set_shape(8);
+        vga::cursor::enable_cursor()
+    }
 }
