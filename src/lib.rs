@@ -3,7 +3,6 @@
 
 extern crate alloc;
 
-use alloc::format;
 use multiboot2::{BootInformation, BootInformationHeader};
 
 mod memory;
@@ -18,7 +17,7 @@ pub extern "C" fn panic_handler(info: &core::panic::PanicInfo) -> ! {
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     vga::text::clear_screen();
-    vga::cursor::disable_cursor();
+    vga::cursor::set_enabled(false);
 
     println!("Starting VOS...");
 
@@ -45,8 +44,8 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
         );
     }
 
-    loop {
-        vga::cursor::set_shape(8);
-        vga::cursor::enable_cursor()
-    }
+    vga::cursor::set_enabled(true);
+    vga::cursor::set_position(0, 22);
+
+    loop {}
 }
