@@ -23,6 +23,9 @@ jobs:
         components: rustfmt, clippy, rust-src
         target: x86_64-unknown-none
 
+    - uses: ilammy/setup-nasm@v1
+      name: Install nasm
+
 
     - uses: actions/checkout@v3
 
