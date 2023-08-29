@@ -1,5 +1,6 @@
 #![no_std]
 #![no_main]
+#![feature(const_mut_refs)]
 
 extern crate alloc;
 
@@ -25,27 +26,11 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
         unsafe { BootInformation::load(multiboot_info_addr as *const BootInformationHeader) }
             .expect("Error while parsing multiboot header: ");
 
-    println!("Memory areas:");
-    for area in boot_info.memory_map_tag().unwrap().memory_areas() {
-        println!(
-            "   start: 0x{:x}, length: 0x{:x}",
-            area.start_address(),
-            area.size(),
-        );
-    }
-
-    println!("kernel sections:");
-    for section in boot_info.elf_sections().unwrap() {
-        println!(
-            "    addr: 0x{:x}, size: 0x{:x}, flags: 0x{:x}",
-            section.start_address(),
-            section.size(),
-            section.flags()
-        );
-    }
-
-    vga::cursor::set_enabled(true);
-    vga::cursor::set_position(0, 22);
+    init(boot_info);
 
     loop {}
+}
+
+fn init(boot_info: BootInformation) -> () {
+    memory::init(boot_info);
 }
