@@ -1,6 +1,6 @@
 use multiboot2::BootInformation;
 
-use crate::memory::frames::{Frame, FrameAllocator};
+use crate::memory::frames::FrameAllocator;
 use crate::memory::paging::PAGE4;
 use crate::println;
 use core::ops::RangeInclusive;

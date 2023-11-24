@@ -38,4 +38,4 @@ $(iso):	$(kernel)	$(grub_cfg)
 	@rm -r build/iso
 
 run:	$(iso)
-	@qemu-system-x86_64 -cdrom $(iso) -enable-kvm
+	@qemu-system-x86_64 -cdrom $(iso) -enable-kvm -serial stdio

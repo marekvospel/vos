@@ -9,6 +9,7 @@ crate-type = ["staticlib"]
 [dependencies]
 bitflags = "2.4.0"
 lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
-multiboot2 = { version = "0.18.1", default-features = false }
+multiboot2 = { version = "0.19.0", default-features = false }
 spin = "0.9.8"
-x86 = "0.52.0"
+uart_16550 = "0.3.0"
+x86_64 = "0.14.11"

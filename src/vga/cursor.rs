@@ -2,6 +2,7 @@
 
 use lazy_static::lazy_static;
 use spin::Mutex;
+use x86_64::instructions::port::{self, Port};
 
 const WIDTH: usize = 80;
 
@@ -30,10 +31,8 @@ impl TextCursor {
         // bit 5 of cursor shape register (13 of this word) controls whether the cursor is enabled
         // bits 0 - 4 of cursor shape register (8 - 12) control the shape
         unsafe {
-            x86::io::outw(
-                0x3D4,
-                0x00_0A | (!self.enabled as u16) << 13 | (self.shape as u16 & 0x1f) << 8,
-            )
+            Port::new(0x3D4)
+                .write(0x00_0A | (!self.enabled as u16) << 13 | (self.shape as u16 & 0x1f) << 8);
         }
     }
 
@@ -41,8 +40,9 @@ impl TextCursor {
     fn update_position(&self) {
         unsafe {
             let pos: u16 = self.row as u16 * WIDTH as u16 + self.col as u16;
-            x86::io::outw(0x3D4, 0x000F | (pos & 0xFF) << 8);
-            x86::io::outw(0x3D4, 0x000E | ((pos >> 8) & 0xFF) << 8);
+            let mut port = Port::new(0x3D4);
+            port.write(0x000F | (pos & 0xFF) << 8);
+            port.write(0x000E | ((pos >> 8) & 0xFF) << 8);
         }
     }
 

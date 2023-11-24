@@ -1,16 +1,19 @@
 #![no_std]
 #![no_main]
 #![feature(const_mut_refs)]
+#![feature(abi_x86_interrupt)]
 
 extern crate alloc;
 
 use multiboot2::{BootInformation, BootInformationHeader};
 
+mod gdt;
 mod memory;
+mod serial;
 mod vga;
 
 #[panic_handler]
-pub extern "C" fn panic_handler(info: &core::panic::PanicInfo) -> ! {
+fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     println!("Kernel panic: {info}");
     loop {}
 }
@@ -28,9 +31,30 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
 
     init(boot_info);
 
+    unsafe {
+        let num = 0xdeadbeef as *mut u32;
+        *num = 42;
+    }
+
     loop {}
 }
 
 fn init(boot_info: BootInformation) -> () {
+    gdt::init_gdt();
+    gdt::init_idt();
     memory::init(boot_info);
+}
+
+#[macro_export]
+macro_rules! println {
+    () => (print!("\n"));
+    ($($arg:tt)*) => (crate::print!("{}\n", format_args!($($arg)*)));
+}
+
+#[macro_export]
+macro_rules! print {
+    ($($arg:tt)*) => ({
+        $crate::vga::text::_print(format_args!($($arg)*));
+        $crate::serial::_print(format_args!($($arg)*));
+    })
 }
