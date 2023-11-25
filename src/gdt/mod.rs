@@ -54,7 +54,7 @@ pub(crate) fn init_gdt() {
         CS::set_reg(GDT.1.kernel_code);
         load_tss(GDT.1.tss);
     }
-    println!("GDT loaded!");
+    println!("[OK] GDT loaded!");
 }
 
 pub(crate) fn init_idt() {
@@ -64,6 +64,6 @@ pub(crate) fn init_idt() {
             .set_handler_fn(interrupt::double_fault)
             .set_stack_index(0);
         IDT.load();
-        println!("IDT loaded!");
+        println!("[OK] IDT loaded!");
     }
 }

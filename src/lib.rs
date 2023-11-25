@@ -2,6 +2,7 @@
 #![no_main]
 #![feature(const_mut_refs)]
 #![feature(abi_x86_interrupt)]
+#![feature(let_chains)]
 
 extern crate alloc;
 
@@ -30,11 +31,6 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
             .expect("Error while parsing multiboot header: ");
 
     init(boot_info);
-
-    unsafe {
-        let num = 0xdeadbeef as *mut u32;
-        *num = 42;
-    }
 
     loop {}
 }

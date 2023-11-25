@@ -1,4 +1,4 @@
-use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
+use x86_64::structures::idt::InterruptStackFrame;
 
 use crate::println;
 
