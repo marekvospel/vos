@@ -30,12 +30,12 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
         unsafe { BootInformation::load(multiboot_info_addr as *const BootInformationHeader) }
             .expect("Error while parsing multiboot header: ");
 
-    init(boot_info);
+    init(&boot_info);
 
     loop {}
 }
 
-fn init(boot_info: BootInformation) -> () {
+fn init(boot_info: &BootInformation) -> () {
     gdt::init_gdt();
     gdt::init_idt();
     memory::init(boot_info);

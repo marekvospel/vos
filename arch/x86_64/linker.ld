@@ -21,12 +21,12 @@ SECTIONS {
     . = ALIGN(4K);
   }
 
-  .eh_frame :
+  .eh_frame : ALIGN(4K)
   {
     . = ALIGN(4K);
   }
 
-  .data.rel.ro :
+  .data.rel.ro : ALIGN(4K)
   {
     *(.data.rel.ro.local*) *(.data.rel.ro .data.rel.ro.*)
     . = ALIGN(4K);

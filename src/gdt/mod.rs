@@ -60,6 +60,7 @@ pub(crate) fn init_gdt() {
 pub(crate) fn init_idt() {
     unsafe {
         IDT.breakpoint.set_handler_fn(interrupt::breakpoint);
+        IDT.page_fault.set_handler_fn(interrupt::page_fault);
         IDT.double_fault
             .set_handler_fn(interrupt::double_fault)
             .set_stack_index(0);
