@@ -1,15 +1,17 @@
+use core::ops::RangeInclusive;
+
+use crate::memory::allocator::LinkedAllocatorNode;
+use crate::memory::frames::bump_alloc::BumpAllocator;
+use crate::memory::frames::{FrameIter, PhysicalFrame, PAGE_SIZE};
+use crate::memory::paging::entry::EntryFlags;
+use crate::memory::paging::mapper::ActivePageTable;
+use crate::memory::paging::Page;
+use crate::println;
+use alloc::string::String;
 use multiboot2::{BootInformation, ElfSectionFlags};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags, Msr};
 use x86_64::registers::xcontrol::{XCr0, XCr0Flags};
-
-use crate::memory::frames::bump_alloc::BumpAllocator;
-use crate::memory::frames::{FrameIter, PhysicalFrame, PAGE_SIZE};
-use crate::memory::paging::entry::EntryFlags;
-use crate::memory::paging::mapper::{self, ActivePageTable};
-use crate::memory::paging::Page;
-use crate::println;
-use core::ops::RangeInclusive;
 
 use self::frames::FrameAlloc;
 use self::paging::inactive::InactivePageTable;
@@ -45,6 +47,25 @@ pub(super) fn init(boot_info: &BootInformation) -> () {
     remap_kernel(&mut frame_allocator, &mut active_page, boot_info);
 
     println!("[OK] Kernel remapped!");
+    println!("[INFO] Initializing linked list allocator...");
+
+    let page = Page::containing_address(0xffff_ffff_ff00_0000);
+    let frame = frame_allocator.allocate_frame().expect("Out of memory");
+    active_page.map_to(page, frame, EntryFlags::WRITABLE, &mut frame_allocator);
+    let node: &mut LinkedAllocatorNode<'static> = unsafe { &mut *(page.start_address() as *mut _) };
+
+    *node = LinkedAllocatorNode {
+        size: PAGE_SIZE as usize - 16,
+        next: None,
+    };
+
+    unsafe { allocator::init(node) };
+
+    println!("[OK] Linked list allocator initialized!");
+    let mut str = String::from("Hello");
+
+    str += " World!";
+    println!("String: {}", str);
 }
 
 fn remap_kernel<A: FrameAlloc>(
