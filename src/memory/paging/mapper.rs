@@ -168,9 +168,7 @@ impl ActivePageTable {
         let old = Cr3::read();
 
         let old_table = InactivePageTable {
-            p4_frame: PhysicalFrame {
-                number: old.0.start_address().as_u64(),
-            },
+            p4_frame: PhysicalFrame::by_addr(old.0.start_address().as_u64()),
         };
         unsafe {
             Cr3::write(

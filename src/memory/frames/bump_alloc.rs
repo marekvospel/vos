@@ -2,6 +2,8 @@ use core::ops::RangeInclusive;
 
 use multiboot2::{MemoryArea, MemoryAreaType};
 
+use crate::println;
+
 use super::{FrameAlloc, PhysicalFrame, PAGE_SIZE};
 
 pub struct BumpAllocator<'a> {
@@ -70,6 +72,7 @@ impl<'a> FrameAlloc for BumpAllocator<'a> {
     }
 
     fn deallocate_frame(&mut self, _frame: PhysicalFrame) {
-        unimplemented!()
+        println!("[WARN] Trying to deallocate a frame, BumpAllocator doesn't support that");
+        // unimplemented!()
     }
 }

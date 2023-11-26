@@ -96,9 +96,10 @@ fn remap_kernel<A: FrameAlloc>(
         mapper.identity_map(vga_text, EntryFlags::WRITABLE, allocator);
     });
 
-    active_table.switch(new_table);
+    let old_table = active_table.switch(new_table);
 
-    // TODO: guard page
+    let old_page = Page::containing_address(old_table.p4_frame.start_address());
+    active_table.unmap(old_page, allocator);
 }
 
 fn enable_write_protect_bit() {
