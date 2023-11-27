@@ -1,4 +1,4 @@
-use core::{marker::PhantomData, mem::size_of};
+use core::mem::size_of;
 
 #[derive(Debug)]
 pub struct LinkedAllocatorNode {
@@ -19,7 +19,7 @@ impl LinkedAllocatorNode {
     }
 
     pub fn end_address(&self) -> usize {
-        self.start_address() + self.size - 1
+        self.start_address() + (self.size - 1)
     }
 
     pub fn as_iter<'a>(&'a self) -> LinkedAllocatorIter {

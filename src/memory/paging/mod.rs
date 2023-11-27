@@ -10,7 +10,7 @@ pub mod temporary;
 
 #[derive(Debug, Clone, Copy)]
 pub struct Page {
-    number: u64,
+    pub(crate) number: u64,
 }
 
 impl Page {
