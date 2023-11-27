@@ -7,8 +7,6 @@ use crate::memory::paging::entry::EntryFlags;
 use crate::memory::paging::mapper::ActivePageTable;
 use crate::memory::paging::Page;
 use crate::println;
-use alloc::string::String;
-use alloc::vec;
 use multiboot2::{BootInformation, ElfSectionFlags};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
@@ -58,21 +56,7 @@ pub(super) fn init(boot_info: &BootInformation) -> () {
 
     unsafe { allocator::init(node) };
 
-    let _ = vec![0u8; 4071];
-
-    let node: &mut LinkedAllocatorNode = unsafe { &mut *(page.start_address() as *mut _) };
-    for node in node.as_iter() {
-        println!("{:?}", node);
-    }
-    // let b = String::from("Hello");
-    // println!("A {val:?}");
-    // println!("B {b}");
-
-    // println!("[OK] Linked list allocator initialized!");
-    // let mut str = String::from("Hello");
-
-    // str += " World!";
-    // println!("String: {}", str);
+    println!("[OK] Linked list allocator initialized!");
 }
 
 fn remap_kernel<A: FrameAlloc>(

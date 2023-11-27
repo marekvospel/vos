@@ -1,5 +1,3 @@
-use crate::println;
-
 use super::{FrameAlloc, PhysicalFrame};
 
 pub struct TinyAlloc {

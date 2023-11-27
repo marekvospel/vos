@@ -6,6 +6,7 @@
 
 extern crate alloc;
 
+use alloc::string::String;
 use multiboot2::{BootInformation, BootInformationHeader};
 
 mod gdt;
@@ -31,6 +32,9 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
             .expect("Error while parsing multiboot header: ");
 
     init(&boot_info);
+
+    let str = String::from("Hello world on heap!");
+    println!("{}", str);
 
     loop {}
 }
