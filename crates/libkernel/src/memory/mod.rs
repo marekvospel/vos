@@ -24,6 +24,8 @@ pub type PhysicalAddress = u64;
 pub type VirtualAddress = u64;
 
 pub const TABLE_SIZE: usize = 512;
+// 1kB
+pub const HEAP_SIZE: usize = 1024;
 
 #[global_allocator]
 static mut ALLOCATOR: LinkedListAllocator = LinkedListAllocator::new();
@@ -52,15 +54,29 @@ pub(super) fn init(boot_info: &BootInformation) -> () {
     println!("[INFO] Initializing linked list allocator...");
 
     let page = Page::containing_address(0xffff_ff00_0000_0000);
-    let frame = frame_allocator.allocate_frame().expect("Out of memory");
-    active_page.map_to(page, frame, EntryFlags::WRITABLE, &mut frame_allocator);
+
+    for i in 0..HEAP_SIZE {
+        let frame = frame_allocator.allocate_frame().expect("Out of memory");
+        active_page.map_to(
+            Page {
+                number: page.number + i as u64,
+            },
+            frame,
+            EntryFlags::WRITABLE,
+            &mut frame_allocator,
+        );
+    }
+
     let node: &mut LinkedAllocatorNode = unsafe { &mut *(page.start_address() as *mut _) };
 
-    *node = LinkedAllocatorNode::new(PAGE_SIZE as usize);
+    *node = LinkedAllocatorNode::new(HEAP_SIZE * PAGE_SIZE as usize);
 
     unsafe { ALLOCATOR.init(node) };
 
-    println!("[OK] Linked list allocator initialized!");
+    println!(
+        "[OK] Linked list allocator initialized with {}kB heap!",
+        HEAP_SIZE * PAGE_SIZE as usize / 1024
+    );
 }
 
 fn remap_kernel<A: FrameAlloc>(
@@ -101,10 +117,30 @@ fn remap_kernel<A: FrameAlloc>(
             }
 
             let start = PhysicalFrame::by_addr(section.start_address());
-            let end = PhysicalFrame::by_addr(section.end_address());
+            let end = PhysicalFrame::by_addr(section.end_address() - 1);
 
             for frame in FrameIter::new(start, end) {
                 mapper.identity_map(frame, flags, allocator);
+            }
+        }
+
+        // Map the multiboot header
+        let multiboot_start = PhysicalFrame::by_addr(boot_info.start_address() as u64);
+        let multiboot_end = PhysicalFrame::by_addr(boot_info.end_address() as u64 - 1);
+
+        for frame in FrameIter::new(multiboot_start, multiboot_end) {
+            mapper.identity_map(frame, EntryFlags::PRESENT, allocator);
+        }
+
+        // Map the framebuffer
+        if let Some(Ok(framebuffer)) = boot_info.framebuffer_tag() {
+            let start = PhysicalFrame::by_addr(framebuffer.address());
+            let end = PhysicalFrame::by_addr(
+                framebuffer.address() + framebuffer.height() as u64 * framebuffer.pitch() as u64,
+            );
+
+            for frame in FrameIter::new(start, end) {
+                mapper.identity_map(frame, EntryFlags::WRITABLE, allocator);
             }
         }
     });

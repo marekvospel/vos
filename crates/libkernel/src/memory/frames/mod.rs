@@ -57,7 +57,7 @@ impl Iterator for FrameIter {
     type Item = PhysicalFrame;
 
     fn next(&mut self) -> Option<Self::Item> {
-        if self.start.number >= self.end.number {
+        if self.start.number > self.end.number {
             return None;
         }
 

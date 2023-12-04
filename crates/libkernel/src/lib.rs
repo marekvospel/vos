@@ -18,6 +18,12 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+struct Pixel {
+    b: u8,
+    g: u8,
+    r: u8,
+}
+
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     let boot_info =
@@ -31,15 +37,13 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
 
     init(&boot_info);
 
-    // let ptr = unsafe { &mut *((framebuffer.address()) as *mut u8) };
-    // *ptr = 255;
+    for i in 0..=100000 {
+        let addr = unsafe {
+            &mut *((framebuffer.address() + (i * framebuffer.bpp() as u64 / 8)) as *mut Pixel)
+        };
+        *addr = Pixel { r: 255, g: 0, b: 0 };
+    }
 
-    // println!("{framebuffer:x?}");
-
-    // let addr = unsafe { &mut *((framebuffer.address()) as *mut u8) };
-    // *addr = 255;
-
-    // Memory init is temporarily disabled
     // let str = String::from("Hello world on heap!");
     // println!("{}", str);
 
@@ -49,7 +53,7 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
 fn init(boot_info: &BootInformation) -> () {
     gdt::init_gdt();
     gdt::init_idt();
-    // memory::init(boot_info);
+    memory::init(boot_info);
 }
 
 #[macro_export]
