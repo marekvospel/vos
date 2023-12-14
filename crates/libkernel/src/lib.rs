@@ -24,6 +24,8 @@ struct Pixel {
     r: u8,
 }
 
+const LETTER_A: u128 = 0b1_00000000_01011100_01111110_01100110_01110110_01111100_01100000_01110110_00111100_00000000_00000000_00000000;
+
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     let boot_info =
@@ -37,15 +39,30 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
 
     init(&boot_info);
 
-    for i in 0..=100000 {
-        let addr = unsafe {
-            &mut *((framebuffer.address() + (i * framebuffer.bpp() as u64 / 8)) as *mut Pixel)
-        };
-        *addr = Pixel { r: 255, g: 0, b: 0 };
-    }
+    let str = String::from("Hello world on heap!");
+    println!("{}", str);
 
-    // let str = String::from("Hello world on heap!");
-    // println!("{}", str);
+    let char_start = framebuffer.address();
+    let char_width = 8;
+    let char_height = 12;
+
+    for y in 0..char_height {
+        for x in 0..char_width {
+            if LETTER_A >> (x + (y * char_width)) & 1 == 0 {
+                continue;
+            }
+            let addr = unsafe {
+                &mut *((char_start
+                    + (x * framebuffer.bpp() as u64 / 8)
+                    + y * framebuffer.pitch() as u64) as *mut Pixel)
+            };
+            *addr = Pixel {
+                r: 255,
+                g: 255,
+                b: 255,
+            };
+        }
+    }
 
     loop {}
 }
