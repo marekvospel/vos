@@ -8,7 +8,7 @@ extern crate alloc;
 use alloc::string::String;
 use multiboot2::{BootInformation, BootInformationHeader};
 
-use crate::font::monocraft;
+use crate::font::{FramebufferLogger, Pixel};
 
 pub mod font;
 mod gdt;
@@ -21,71 +21,6 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-#[allow(unused)]
-struct Pixel {
-    b: u8,
-    g: u8,
-    r: u8,
-}
-
-const CHAR_WIDTH: u64 = 7;
-const CHAR_HEIGHT: u64 = 9;
-
-fn write_letter(framebuffer: &multiboot2::FramebufferTag, offset: u64, letter: u64) {
-    let char_start =
-        framebuffer.address() + offset * (CHAR_WIDTH * 2 + 2) * framebuffer.bpp() as u64 / 8;
-
-    for y in 0..CHAR_HEIGHT {
-        for x in 0..CHAR_WIDTH {
-            let visible = letter >> (x + (y * CHAR_WIDTH)) & 1 != 0;
-            let addr = unsafe {
-                &mut *((char_start
-                    + (2 * x * framebuffer.bpp() as u64 / 8)
-                    + (2 * y) * framebuffer.pitch() as u64) as *mut Pixel)
-            };
-            *addr = Pixel {
-                r: visible as u8 * 255,
-                g: visible as u8 * 255,
-                b: visible as u8 * 255,
-            };
-
-            let addr = unsafe {
-                &mut *((char_start
-                    + ((2 * x + 1) * framebuffer.bpp() as u64 / 8)
-                    + (2 * y) * framebuffer.pitch() as u64) as *mut Pixel)
-            };
-            *addr = Pixel {
-                r: visible as u8 * 255,
-                g: visible as u8 * 255,
-                b: visible as u8 * 255,
-            };
-            let addr = unsafe {
-                &mut *((char_start
-                    + (2 * x * framebuffer.bpp() as u64 / 8)
-                    + (2 * y + 1) * framebuffer.pitch() as u64)
-                    as *mut Pixel)
-            };
-            *addr = Pixel {
-                r: visible as u8 * 255,
-                g: visible as u8 * 255,
-                b: visible as u8 * 255,
-            };
-
-            let addr = unsafe {
-                &mut *((char_start
-                    + ((2 * x + 1) * framebuffer.bpp() as u64 / 8)
-                    + (2 * y + 1) * framebuffer.pitch() as u64)
-                    as *mut Pixel)
-            };
-            *addr = Pixel {
-                r: visible as u8 * 255,
-                g: visible as u8 * 255,
-                b: visible as u8 * 255,
-            };
-        }
-    }
-}
-
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     let boot_info =
@@ -93,6 +28,7 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
             .expect("Error while parsing multiboot header: ");
 
     let framebuffer = boot_info.framebuffer_tag().unwrap().unwrap();
+
     println!("{framebuffer:?}");
 
     println!("Starting VOS...");
@@ -102,10 +38,34 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     let str = String::from("Hello world on heap!");
     println!("{}", str);
 
-    let letters = "AB CDEFGHI JKLMNOPQRSTUVWXYZ abcdefghijk";
+    let mut logger = unsafe { FramebufferLogger::new(framebuffer) };
 
-    for (i, letter) in letters.chars().enumerate() {
-        write_letter(&framebuffer, i as u64, monocraft::resolve_letter(letter));
+    logger.set_color(Pixel {
+        r: 100,
+        g: 100,
+        b: 100,
+    });
+    logger.write_char('[');
+
+    logger.set_color(Pixel { r: 0, g: 255, b: 0 });
+    logger.write_char('O');
+    logger.write_char('K');
+
+    logger.set_color(Pixel {
+        r: 100,
+        g: 100,
+        b: 100,
+    });
+    logger.write_char(']');
+
+    logger.set_color(Pixel {
+        r: 255,
+        g: 255,
+        b: 255,
+    });
+    let letters = " This is my 1st framebuffer message! aaaaaaaaaabbbcccc";
+    for letter in letters.chars() {
+        logger.write_char(letter);
     }
 
     loop {}
