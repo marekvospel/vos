@@ -8,6 +8,9 @@ extern crate alloc;
 use alloc::string::String;
 use multiboot2::{BootInformation, BootInformationHeader};
 
+use crate::font::monocraft;
+
+pub mod font;
 mod gdt;
 mod memory;
 mod serial;
@@ -18,13 +21,70 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
+#[allow(unused)]
 struct Pixel {
     b: u8,
     g: u8,
     r: u8,
 }
 
-const LETTER_A: u128 = 0b1_00000000_01011100_01111110_01100110_01110110_01111100_01100000_01110110_00111100_00000000_00000000_00000000;
+const CHAR_WIDTH: u64 = 7;
+const CHAR_HEIGHT: u64 = 9;
+
+fn write_letter(framebuffer: &multiboot2::FramebufferTag, offset: u64, letter: u64) {
+    let char_start =
+        framebuffer.address() + offset * (CHAR_WIDTH * 2 + 2) * framebuffer.bpp() as u64 / 8;
+
+    for y in 0..CHAR_HEIGHT {
+        for x in 0..CHAR_WIDTH {
+            let visible = letter >> (x + (y * CHAR_WIDTH)) & 1 != 0;
+            let addr = unsafe {
+                &mut *((char_start
+                    + (2 * x * framebuffer.bpp() as u64 / 8)
+                    + (2 * y) * framebuffer.pitch() as u64) as *mut Pixel)
+            };
+            *addr = Pixel {
+                r: visible as u8 * 255,
+                g: visible as u8 * 255,
+                b: visible as u8 * 255,
+            };
+
+            let addr = unsafe {
+                &mut *((char_start
+                    + ((2 * x + 1) * framebuffer.bpp() as u64 / 8)
+                    + (2 * y) * framebuffer.pitch() as u64) as *mut Pixel)
+            };
+            *addr = Pixel {
+                r: visible as u8 * 255,
+                g: visible as u8 * 255,
+                b: visible as u8 * 255,
+            };
+            let addr = unsafe {
+                &mut *((char_start
+                    + (2 * x * framebuffer.bpp() as u64 / 8)
+                    + (2 * y + 1) * framebuffer.pitch() as u64)
+                    as *mut Pixel)
+            };
+            *addr = Pixel {
+                r: visible as u8 * 255,
+                g: visible as u8 * 255,
+                b: visible as u8 * 255,
+            };
+
+            let addr = unsafe {
+                &mut *((char_start
+                    + ((2 * x + 1) * framebuffer.bpp() as u64 / 8)
+                    + (2 * y + 1) * framebuffer.pitch() as u64)
+                    as *mut Pixel)
+            };
+            *addr = Pixel {
+                r: visible as u8 * 255,
+                g: visible as u8 * 255,
+                b: visible as u8 * 255,
+            };
+        }
+    }
+}
 
 #[no_mangle]
 pub extern "C" fn rust_main(multiboot_info_addr: usize) {
@@ -42,26 +102,10 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     let str = String::from("Hello world on heap!");
     println!("{}", str);
 
-    let char_start = framebuffer.address();
-    let char_width = 8;
-    let char_height = 12;
+    let letters = "AB CDEFGHI JKLMNOPQRSTUVWXYZ abcdefghijk";
 
-    for y in 0..char_height {
-        for x in 0..char_width {
-            if LETTER_A >> (x + (y * char_width)) & 1 == 0 {
-                continue;
-            }
-            let addr = unsafe {
-                &mut *((char_start
-                    + (x * framebuffer.bpp() as u64 / 8)
-                    + y * framebuffer.pitch() as u64) as *mut Pixel)
-            };
-            *addr = Pixel {
-                r: 255,
-                g: 255,
-                b: 255,
-            };
-        }
+    for (i, letter) in letters.chars().enumerate() {
+        write_letter(&framebuffer, i as u64, monocraft::resolve_letter(letter));
     }
 
     loop {}
