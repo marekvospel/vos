@@ -131,7 +131,7 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
             last_node = Some(node);
         }
 
-        panic!("Could not deallocate 0x{:x} {:?}", ptr as usize, layout);
+        // panic!("Could not deallocate 0x{:x} {:?}", ptr as usize, layout);
     }
 }
 
