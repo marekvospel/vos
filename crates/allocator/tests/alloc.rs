@@ -92,6 +92,41 @@ fn should_merge_with_next_node() {
 
     unsafe {
         let ptr1 = allocator.alloc(Layout::from_size_align_unchecked(32, 32));
+        let _ptr2 = allocator.alloc(Layout::from_size_align_unchecked(5, 1));
+
+        print_nodes(&allocator);
+
+        // Start, ptr2, ptr1, reserved
+        {
+            let node = &*(allocator.nodes_mut().unwrap());
+            assert_eq!(node.as_iter().count(), 4);
+        }
+
+        allocator.dealloc(ptr1, Layout::from_size_align_unchecked(32, 32));
+
+        print_nodes(&allocator);
+
+        // Start, ptr2, free
+        {
+            let node = &*(allocator.nodes_mut().unwrap());
+            assert_eq!(node.as_iter().count(), 3);
+        }
+    }
+}
+
+#[test]
+fn should_merge_with_next_and_previous_node() {
+    const SIZE: usize = 256;
+    let mut buf = [0u8; SIZE];
+    let node = create_node(&mut buf[0] as *const _ as usize, SIZE);
+
+    let node = unsafe { &mut *node };
+
+    let mut allocator = LinkedListAllocator::new();
+    allocator.init(node);
+
+    unsafe {
+        let ptr1 = allocator.alloc(Layout::from_size_align_unchecked(32, 32));
         let ptr2 = allocator.alloc(Layout::from_size_align_unchecked(5, 1));
 
         print_nodes(&allocator);
@@ -115,9 +150,86 @@ fn should_merge_with_next_node() {
         allocator.dealloc(ptr2, Layout::from_size_align_unchecked(5, 1));
     }
 
-    // Free
+    // free
     let node = unsafe { &*(allocator.nodes_mut().unwrap()) };
+    assert!(node.free);
+    assert_eq!(node.size, SIZE - size_of::<LinkedAllocatorNode>());
+    assert_eq!(node.next, None);
+}
 
+#[test]
+fn should_merge_after_multiple_allocations() {
+    const SIZE: usize = 512;
+    let mut buf = [0u8; SIZE];
+    let node = create_node(&mut buf[0] as *const _ as usize, SIZE);
+
+    let node = unsafe { &mut *node };
+
+    let mut allocator = LinkedListAllocator::new();
+    allocator.init(node);
+
+    unsafe {
+        let layout1 = Layout::from_size_align_unchecked(32, 32);
+        let layout2 = Layout::from_size_align_unchecked(5, 1);
+        let layout3 = Layout::from_size_align_unchecked(16, 2);
+        let ptr1 = allocator.alloc(layout1);
+        let ptr2 = allocator.alloc(layout2);
+        let ptr3 = allocator.alloc(layout3);
+        let ptr4 = allocator.alloc(layout2);
+        let ptr5 = allocator.alloc(layout1);
+
+        print_nodes(&allocator);
+
+        allocator.dealloc(ptr1, layout1);
+        allocator.dealloc(ptr3, layout3);
+        allocator.dealloc(ptr2, layout2);
+        allocator.dealloc(ptr5, layout1);
+        allocator.dealloc(ptr4, layout2);
+    }
+
+    // free
+    let node = unsafe { &*(allocator.nodes_mut().unwrap()) };
+    assert!(node.free);
+    assert_eq!(node.size, SIZE - size_of::<LinkedAllocatorNode>());
+    assert_eq!(node.next, None);
+}
+
+#[test]
+#[should_panic]
+fn should_fail_allocating_too_big_chunk() {
+    const SIZE: usize = 64;
+    let mut buf = [0u8; SIZE];
+    let node = create_node(&mut buf[0] as *const _ as usize, SIZE);
+
+    let node = unsafe { &mut *node };
+
+    let mut allocator = LinkedListAllocator::new();
+    allocator.init(node);
+
+    unsafe {
+        let layout1 = Layout::from_size_align_unchecked(256, 2);
+        let ptr1 = allocator.alloc(layout1);
+    }
+}
+
+#[test]
+fn should_allocate_exact_size() {
+    const SIZE: usize = size_of::<LinkedAllocatorNode>() + 8;
+    let mut buf = [0u8; SIZE];
+    let node = create_node(&mut buf[0] as *const _ as usize, SIZE);
+
+    let node = unsafe { &mut *node };
+
+    let mut allocator = LinkedListAllocator::new();
+    allocator.init(node);
+
+    unsafe {
+        let layout1 = Layout::from_size_align_unchecked(8, 2);
+        let ptr1 = allocator.alloc(layout1);
+        allocator.dealloc(ptr1, layout1);
+    }
+
+    let node = unsafe { &*(allocator.nodes_mut().unwrap()) };
     assert!(node.free);
     assert_eq!(node.size, SIZE - size_of::<LinkedAllocatorNode>());
     assert_eq!(node.next, None);
