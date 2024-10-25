@@ -107,9 +107,6 @@ fn remap_kernel<A: FrameAlloc>(
                 mapper.identity_map(frame, flags, allocator);
             }
         }
-
-        let vga_text = PhysicalFrame::by_addr(0xb8000);
-        mapper.identity_map(vga_text, EntryFlags::WRITABLE, allocator);
     });
 
     let old_table = active_table.switch(new_table);

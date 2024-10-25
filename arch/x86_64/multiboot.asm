@@ -8,6 +8,14 @@ header_start:
 
   ; insert optional multiboot tags here
 
+  ; Framebuffer tag
+  dw 5    ; type
+  dw 0    ; flags
+  dw 20   ; size
+  dd 640  ; width
+  dd 480  ; height
+  dd 24   ; depth
+
   ; required end tag
   dw 0    ; type
   dw 0    ; flags
