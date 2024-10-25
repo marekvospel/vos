@@ -23,7 +23,6 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
         }
 
         let start_node = NODES.as_deref_mut().unwrap();
-        println!("Allocating {}... {}", layout.size(), layout.align());
 
         for node in start_node.as_iter() {
             if !node.free {
