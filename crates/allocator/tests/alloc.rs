@@ -224,9 +224,14 @@ fn should_allocate_exact_size() {
     allocator.init(node);
 
     unsafe {
+        print_nodes(&allocator);
+
         let layout1 = Layout::from_size_align_unchecked(8, 2);
         let ptr1 = allocator.alloc(layout1);
+        print_nodes(&allocator);
+
         allocator.dealloc(ptr1, layout1);
+        print_nodes(&allocator);
     }
 
     let node = unsafe { &*(allocator.nodes_mut().unwrap()) };

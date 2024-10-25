@@ -24,6 +24,14 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
                 continue;
             }
 
+            // Try to use the node as is
+            if node.size == layout.size()
+                && node.start_address() / layout.align() * layout.align() == node.start_address()
+            {
+                node.free = false;
+                return node.start_address() as *mut u8;
+            }
+
             // Find where to put the allocation
             let mut aligned_addr = (node.end_address() + 1 - layout.size()) / layout.align()
                 * layout.align()
@@ -93,7 +101,7 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
         // Min alloc size is size of LinkedListAllocator, so when deallocating, the Node tag can be inserted
         let start_node = &mut *(self.nodes_mut().unwrap());
 
-        let mut last_node = &mut *(start_node as *mut LinkedAllocatorNode);
+        let mut last_node: Option<&mut LinkedAllocatorNode> = None;
         let mut iter = start_node.as_iter();
         while let Some(node) = iter.next() {
             if ptr as usize == node.start_address() {
@@ -110,15 +118,17 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
                 }
 
                 // Merge with previous allocation
-                if last_node.free {
-                    last_node.size += node.size + size_of::<LinkedAllocatorNode>();
-                    last_node.next = next_node.map(|n| n as *mut LinkedAllocatorNode);
+                if let Some(last_node) = last_node {
+                    if last_node.free {
+                        last_node.size += node.size + size_of::<LinkedAllocatorNode>();
+                        last_node.next = next_node.map(|n| n as *mut LinkedAllocatorNode);
+                    }
                 }
 
                 return;
             }
 
-            last_node = node;
+            last_node = Some(node);
         }
 
         panic!("Could not deallocate 0x{:x} {:?}", ptr as usize, layout);
