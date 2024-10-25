@@ -1,7 +1,5 @@
 use core::ops::RangeInclusive;
 
-use crate::memory::allocator::linked_list::LinkedAllocatorNode;
-use crate::memory::allocator::print_nodes;
 use crate::memory::frames::bump_alloc::BumpAllocator;
 use crate::memory::frames::{FrameIter, PhysicalFrame, PAGE_SIZE};
 use crate::memory::paging::entry::EntryFlags;
@@ -17,8 +15,8 @@ use x86_64::registers::model_specific::{Efer, EferFlags};
 use self::frames::FrameAlloc;
 use self::paging::inactive::InactivePageTable;
 use self::paging::temporary::TemporaryPage;
+use allocator::{LinkedAllocatorNode, LinkedListAllocator};
 
-pub mod allocator;
 pub mod frames;
 pub mod paging;
 
@@ -26,6 +24,9 @@ pub type PhysicalAddress = u64;
 pub type VirtualAddress = u64;
 
 pub const TABLE_SIZE: usize = 512;
+
+#[global_allocator]
+static mut ALLOCATOR: LinkedListAllocator = LinkedListAllocator::new();
 
 pub(super) fn init(boot_info: &BootInformation) -> () {
     enable_write_protect_bit();
@@ -57,7 +58,7 @@ pub(super) fn init(boot_info: &BootInformation) -> () {
 
     *node = LinkedAllocatorNode::new(PAGE_SIZE as usize);
 
-    unsafe { allocator::init(node) };
+    unsafe { ALLOCATOR.init(node) };
 
     println!("[OK] Linked list allocator initialized!");
 }

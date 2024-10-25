@@ -2,9 +2,9 @@ use core::mem::size_of;
 
 #[derive(Debug)]
 pub struct LinkedAllocatorNode {
-    pub(crate) size: usize,
-    pub(crate) free: bool,
-    pub(crate) next: Option<*mut Self>,
+    pub size: usize,
+    pub free: bool,
+    pub next: Option<*mut Self>,
 }
 
 impl LinkedAllocatorNode {

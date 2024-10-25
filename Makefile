@@ -39,3 +39,7 @@ $(iso):	$(kernel)	$(grub_cfg)
 
 run:	$(iso)
 	@qemu-system-x86_64 -cdrom $(iso) -enable-kvm -serial stdio
+
+test:
+	@cargo test -p allocator --target x86_64-unknown-linux-gnu -Zbuild-std 
+

@@ -1,6 +1,5 @@
 #![no_std]
 #![no_main]
-#![feature(const_mut_refs)]
 #![feature(abi_x86_interrupt)]
 #![feature(let_chains)]
 

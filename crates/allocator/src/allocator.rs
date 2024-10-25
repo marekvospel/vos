@@ -1,28 +1,23 @@
 use core::{
     alloc::{GlobalAlloc, Layout},
-    cmp::max,
     mem::size_of,
 };
 
-use self::linked_list::LinkedAllocatorNode;
-use crate::println;
+use crate::LinkedAllocatorNode;
 
-pub mod linked_list;
+pub struct LinkedListAllocator {
+    pub nodes: Option<*mut LinkedAllocatorNode>,
+}
 
-static mut NODES: Option<&mut LinkedAllocatorNode> = None;
-
-#[global_allocator]
-static ALLOCATOR: LinkedListAllocator = LinkedListAllocator {};
-
-pub struct LinkedListAllocator {}
+unsafe impl Send for LinkedListAllocator {}
 
 unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
     unsafe fn alloc(&self, layout: Layout) -> *mut u8 {
-        if NODES.is_none() {
+        if self.nodes.is_none() {
             panic!("LinkedListAllocator has not been initialized yet");
         }
 
-        let start_node = NODES.as_deref_mut().unwrap();
+        let start_node = &mut *(self.nodes_mut().unwrap());
 
         for node in start_node.as_iter() {
             if !node.free {
@@ -65,7 +60,7 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
             let new_node = &mut *((aligned_addr) as *mut LinkedAllocatorNode);
             new_node.size = layout.size();
             new_node.free = false;
-            if (empty_node.is_some()) {
+            if empty_node.is_some() {
                 new_node.next = empty_node;
             } else {
                 new_node.next = node.next;
@@ -74,7 +69,7 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
             // TODO: handle this, possibly a rush condition, fuck locks but im too lazy to write
             // actual atomic allocator xd
             if node.size != 0 {
-                println!("! Weird stuff happening not good, mod.rs:54");
+                // println!("! Weird stuff happening not good, mod.rs:54");
             }
 
             // Successful alloc
@@ -88,17 +83,17 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
     }
 
     unsafe fn dealloc(&self, ptr: *mut u8, layout: Layout) {
-        if NODES.is_none() {
+        if self.nodes.is_none() {
             panic!("LinkedListAllocator has not been initialized yet");
         }
 
         // Min alloc size is size of LinkedListAllocator, so when deallocating, the Node tag can be inserted
-        let start_node = NODES.as_deref_mut().unwrap();
+        let start_node = &mut *(self.nodes_mut().unwrap());
 
         let mut last_node = &mut *(start_node as *mut LinkedAllocatorNode);
         let mut iter = start_node.as_iter();
         while let Some(node) = iter.next() {
-            if (ptr as usize == node.start_address()) {
+            if ptr as usize == node.start_address() {
                 let mut next_node = iter.next();
                 node.free = true;
 
@@ -127,20 +122,19 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
     }
 }
 
-pub unsafe fn print_nodes() {
-    if NODES.is_none() {
-        panic!("LinkedListAllocator has not been initialized yet");
+impl LinkedListAllocator {
+    pub const fn new() -> LinkedListAllocator {
+        LinkedListAllocator { nodes: None }
     }
 
-    let start_node = NODES.as_deref_mut().unwrap();
-    for node in start_node.as_iter() {
-        println!("0x{:x}: Node: {node:?}", node as *const _ as usize);
+    pub fn init(&mut self, node: &'static mut LinkedAllocatorNode) {
+        if self.nodes.is_some() {
+            panic!("LinkedListAllocator is already initialized");
+        }
+        self.nodes = Some(node as *mut _);
     }
-}
 
-pub unsafe fn init(node: &'static mut LinkedAllocatorNode) {
-    if NODES.is_some() {
-        panic!("LinkedListAllocator is already initialized");
+    pub(crate) unsafe fn nodes_mut(&self) -> Option<*mut LinkedAllocatorNode> {
+        self.nodes.map(|n| n as *mut _)
     }
-    NODES = Some(node);
 }
