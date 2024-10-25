@@ -3,6 +3,7 @@ use core::mem::size_of;
 #[derive(Debug)]
 pub struct LinkedAllocatorNode {
     pub(crate) size: usize,
+    pub(crate) free: bool,
     pub(crate) next: Option<*mut Self>,
 }
 
@@ -10,6 +11,7 @@ impl LinkedAllocatorNode {
     pub fn new(size: usize) -> Self {
         LinkedAllocatorNode {
             size: size - size_of::<Self>(),
+            free: true,
             next: None,
         }
     }
@@ -18,6 +20,7 @@ impl LinkedAllocatorNode {
         self as *const _ as usize + size_of::<Self>()
     }
 
+    // Returns the last address in this node
     pub fn end_address(&self) -> usize {
         self.start_address() + (self.size - 1)
     }

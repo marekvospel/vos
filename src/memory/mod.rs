@@ -1,12 +1,15 @@
 use core::ops::RangeInclusive;
 
 use crate::memory::allocator::linked_list::LinkedAllocatorNode;
+use crate::memory::allocator::print_nodes;
 use crate::memory::frames::bump_alloc::BumpAllocator;
 use crate::memory::frames::{FrameIter, PhysicalFrame, PAGE_SIZE};
 use crate::memory::paging::entry::EntryFlags;
 use crate::memory::paging::mapper::ActivePageTable;
 use crate::memory::paging::Page;
 use crate::println;
+use alloc::string::String;
+use alloc::vec;
 use multiboot2::{BootInformation, ElfSectionFlags};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};

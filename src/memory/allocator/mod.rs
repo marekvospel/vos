@@ -5,6 +5,7 @@ use core::{
 };
 
 use self::linked_list::LinkedAllocatorNode;
+use crate::println;
 
 pub mod linked_list;
 
@@ -21,43 +22,67 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
             panic!("LinkedListAllocator has not been initialized yet");
         }
 
-        // Min alloc size is size of LinkedListAllocator, so when deallocating, the Node tag can be inserted
-        let size = max(layout.size(), size_of::<LinkedAllocatorNode>());
         let start_node = NODES.as_deref_mut().unwrap();
+        println!("Allocating {}... {}", layout.size(), layout.align());
 
-        let mut last_node = &mut *(start_node as *mut LinkedAllocatorNode);
         for node in start_node.as_iter() {
-            let aligned_addr = (node.end_address() + 1 - size) / layout.align() * layout.align();
-            let valid_addr;
-
-            if aligned_addr == node.end_address() + 1 - size {
-                // section is at the end, no need to create new LinkedAllocatorNode
-                valid_addr = aligned_addr;
-            } else {
-                // section isn't at the end, add padding
-                valid_addr = (node.end_address() + 1 - size - size_of::<LinkedAllocatorNode>())
-                    / layout.align()
-                    * layout.align();
-            }
-
-            if valid_addr < node.start_address() {
-                last_node = node;
+            if !node.free {
                 continue;
             }
 
-            node.size = valid_addr - node.start_address();
+            // Find where to put the allocation
+            let mut aligned_addr = (node.end_address() + 1 - layout.size()) / layout.align()
+                * layout.align()
+                - size_of::<LinkedAllocatorNode>();
+            let mut empty_node = None;
 
-            if aligned_addr != valid_addr {
-                let new_node = unsafe {
-                    &mut *((node.end_address() + 1 - size_of::<LinkedAllocatorNode>())
-                        as *mut LinkedAllocatorNode)
-                };
-                new_node.size = 0;
-                new_node.next = node.next;
-                last_node.next = Some(new_node);
+            // section isn't at the end, add padding
+            if aligned_addr
+                != node.end_address() + 1 - layout.size() - size_of::<LinkedAllocatorNode>()
+            {
+                aligned_addr =
+                    (node.end_address() + 1 - layout.size() - size_of::<LinkedAllocatorNode>())
+                        / layout.align()
+                        * layout.align()
+                        - size_of::<LinkedAllocatorNode>();
+
+                empty_node = Some(
+                    (node.end_address() + 1 - size_of::<LinkedAllocatorNode>())
+                        as *mut LinkedAllocatorNode,
+                );
+                let empty_node = &mut *empty_node.unwrap();
+                empty_node.free = true;
+                empty_node.size = 0;
+                empty_node.next = node.next;
             }
 
-            return valid_addr as *mut u8;
+            // If there is space for our allocation and its node
+            if aligned_addr < node.start_address() {
+                continue;
+            }
+
+            node.size = 0;
+
+            let new_node = &mut *((aligned_addr) as *mut LinkedAllocatorNode);
+            new_node.size = layout.size();
+            new_node.free = false;
+            if (empty_node.is_some()) {
+                new_node.next = empty_node;
+            } else {
+                new_node.next = node.next;
+            }
+
+            // TODO: handle this, possibly a rush condition, fuck locks but im too lazy to write
+            // actual atomic allocator xd
+            if node.size != 0 {
+                println!("! Weird stuff happening not good, mod.rs:54");
+            }
+
+            // Successful alloc
+            node.next = Some(new_node);
+            node.size = aligned_addr - node.start_address();
+
+            return (aligned_addr + size_of::<LinkedAllocatorNode>()) as *mut u8;
         }
 
         panic!("No section in heap matching {:?}", layout)
@@ -69,53 +94,48 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
         }
 
         // Min alloc size is size of LinkedListAllocator, so when deallocating, the Node tag can be inserted
-        let size = max(layout.size(), size_of::<LinkedAllocatorNode>());
         let start_node = NODES.as_deref_mut().unwrap();
 
         let mut last_node = &mut *(start_node as *mut LinkedAllocatorNode);
         let mut iter = start_node.as_iter();
         while let Some(node) = iter.next() {
-            // ptr is right next to an existing node
-            if node.end_address() + 1 == ptr as usize {
-                last_node.size += if let Some(next) = node.next
-                    && node.end_address() + 1 == next as *const _ as usize
-                {
-                    let next = &mut *next;
-                    last_node.next = next.next;
-                    size + size_of::<LinkedAllocatorNode>() + next.size
-                } else {
-                    size
-                };
+            if (ptr as usize == node.start_address()) {
+                let mut next_node = iter.next();
+                node.free = true;
 
-                if let Some(next) = last_node.next
-                    && last_node.end_address() + 1 == next as usize
-                {
-                    let next = &*next;
-                    last_node.size += size_of::<LinkedAllocatorNode>() + next.size;
-                    last_node.next = next.next;
+                // Merge with next allocation
+                if let Some(ref nnode) = next_node {
+                    if nnode.free && node.end_address() + 1 == (*nnode) as *const _ as usize {
+                        node.next = nnode.next;
+                        node.size += nnode.size + size_of::<LinkedAllocatorNode>();
+                        next_node = iter.next();
+                    }
+                }
+
+                // Merge with previous allocation
+                if last_node.free {
+                    last_node.size += node.size + size_of::<LinkedAllocatorNode>();
+                    last_node.next = next_node.map(|n| n as *mut LinkedAllocatorNode);
                 }
 
                 return;
-            } else if ptr as usize > last_node.end_address() {
-                if node.next.is_none() || (ptr as usize) < node as *const _ as usize {
-                    let middle_node = &mut *(ptr as *mut LinkedAllocatorNode);
-                    middle_node.size = size - size_of::<LinkedAllocatorNode>();
-                    middle_node.next =
-                        if node as *const _ as usize == last_node as *const _ as usize {
-                            node.next
-                        } else {
-                            Some(node)
-                        };
-                    last_node.next = Some(middle_node);
-
-                    return;
-                }
             }
 
             last_node = node;
         }
 
         panic!("Could not deallocate 0x{:x} {:?}", ptr as usize, layout);
+    }
+}
+
+pub unsafe fn print_nodes() {
+    if NODES.is_none() {
+        panic!("LinkedListAllocator has not been initialized yet");
+    }
+
+    let start_node = NODES.as_deref_mut().unwrap();
+    for node in start_node.as_iter() {
+        println!("0x{:x}: Node: {node:?}", node as *const _ as usize);
     }
 }
 
