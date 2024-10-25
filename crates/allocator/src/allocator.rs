@@ -30,7 +30,7 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
                 - size_of::<LinkedAllocatorNode>();
             let mut empty_node = None;
 
-            // section isn't at the end, add padding
+            // section isn't at the end, add padding that is at least LinkedAllocatorNode big
             if aligned_addr
                 != node.end_address() + 1 - layout.size() - size_of::<LinkedAllocatorNode>()
             {
@@ -41,12 +41,15 @@ unsafe impl<'a> GlobalAlloc for LinkedListAllocator {
                         - size_of::<LinkedAllocatorNode>();
 
                 empty_node = Some(
-                    (node.end_address() + 1 - size_of::<LinkedAllocatorNode>())
+                    (aligned_addr + layout.size() + size_of::<LinkedAllocatorNode>())
                         as *mut LinkedAllocatorNode,
                 );
                 let empty_node = &mut *empty_node.unwrap();
                 empty_node.free = true;
-                empty_node.size = 0;
+                empty_node.size = (node.end_address() + 1)
+                    - (aligned_addr + layout.size() + 2 * size_of::<LinkedAllocatorNode>());
+
+                assert_eq!(empty_node.end_address(), node.end_address());
                 empty_node.next = node.next;
             }
 
@@ -134,7 +137,7 @@ impl LinkedListAllocator {
         self.nodes = Some(node as *mut _);
     }
 
-    pub(crate) unsafe fn nodes_mut(&self) -> Option<*mut LinkedAllocatorNode> {
+    pub unsafe fn nodes_mut(&self) -> Option<*mut LinkedAllocatorNode> {
         self.nodes.map(|n| n as *mut _)
     }
 }
