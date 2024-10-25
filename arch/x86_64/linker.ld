@@ -38,6 +38,12 @@ SECTIONS {
     . = ALIGN(4K);
   }
 
+  .got :
+  {
+    *(.got .got.*)
+    . = ALIGN(4K);
+  }
+
   .bss :
   {
     *(.bss .bss.*)

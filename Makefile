@@ -2,7 +2,7 @@ arch		?=	x86_64
 target	?=	$(arch)-custom
 kernel	:=	build/kernel-$(arch).bin
 iso			:=	build/image-$(arch).iso
-rust_kernel	:=target/$(target)/release/libkernel.a
+rust_kernel	:= target/$(target)/release/libkernel.a
 
 ld_script	:=	arch/$(arch)/linker.ld
 grub_cfg	:=	arch/$(arch)/grub.cfg
@@ -18,7 +18,7 @@ clean:
 	@rm -rf build
 
 $(kernel): kernel	$(asm_obj)	$(ld_script)
-	@ld -n -T $(ld_script) -o $(kernel) $(asm_obj) $(rust_kernel)
+	@ld -n -T $(ld_script) -static -o $(kernel) $(asm_obj) $(rust_kernel)
 
 kernel:
 	@RUST_TARGET_PATH=$(shell pwd)/targets cargo build --target $(target) --release

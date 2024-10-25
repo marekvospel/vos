@@ -77,14 +77,14 @@ fn remap_kernel<A: FrameAlloc>(
                 continue;
             }
 
+            println!(
+                "Remapping {:}...",
+                section.name().unwrap_or("<Invalid section name>")
+            );
+
             assert!(
                 section.start_address() % PAGE_SIZE == 0,
                 "sections need to be page aligned"
-            );
-
-            println!(
-                "Remapping {:}",
-                section.name().unwrap_or("<Invalid section name>")
             );
 
             let mut flags = EntryFlags::PRESENT;
