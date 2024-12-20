@@ -2,9 +2,9 @@ use core::ops::RangeInclusive;
 
 use multiboot2::{MemoryArea, MemoryAreaType};
 
-use crate::println;
+use kernel::println;
 
-use super::{FrameAlloc, PhysicalFrame, PAGE_SIZE};
+use super::{FrameAlloc, PAGE_SIZE, PhysicalFrame};
 
 pub struct BumpAllocator<'a> {
     next_frame: PhysicalFrame,

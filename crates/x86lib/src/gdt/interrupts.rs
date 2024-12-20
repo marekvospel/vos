@@ -1,9 +1,7 @@
 use x86_64::structures::idt::{InterruptStackFrame, PageFaultErrorCode};
 
-use crate::println;
-
 pub(crate) extern "x86-interrupt" fn breakpoint(stack_frame: InterruptStackFrame) {
-    println!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
+    panic!("EXCEPTION: BREAKPOINT\n{:#?}", stack_frame);
 }
 
 pub(crate) extern "x86-interrupt" fn page_fault(

@@ -1,13 +1,12 @@
 use core::ops::RangeInclusive;
 
 use crate::memory::frames::bump_alloc::BumpAllocator;
-use crate::memory::frames::{FrameIter, PhysicalFrame, PAGE_SIZE};
+use crate::memory::frames::{FrameIter, PAGE_SIZE, PhysicalFrame};
+use crate::memory::paging::Page;
 use crate::memory::paging::entry::EntryFlags;
 use crate::memory::paging::mapper::ActivePageTable;
-use crate::memory::paging::Page;
-use crate::println;
-use alloc::string::String;
-use alloc::vec;
+use archlib::HeapBlock;
+use kernel::println;
 use multiboot2::{BootInformation, ElfSectionFlags};
 use x86_64::registers::control::{Cr0, Cr0Flags};
 use x86_64::registers::model_specific::{Efer, EferFlags};
@@ -15,7 +14,6 @@ use x86_64::registers::model_specific::{Efer, EferFlags};
 use self::frames::FrameAlloc;
 use self::paging::inactive::InactivePageTable;
 use self::paging::temporary::TemporaryPage;
-use allocator::{LinkedAllocatorNode, LinkedListAllocator};
 
 pub mod frames;
 pub mod paging;
@@ -25,10 +23,7 @@ pub type VirtualAddress = u64;
 
 pub const TABLE_SIZE: usize = 512;
 
-#[global_allocator]
-static mut ALLOCATOR: LinkedListAllocator = LinkedListAllocator::new();
-
-pub(super) fn init(boot_info: &BootInformation) -> () {
+pub(super) fn init(boot_info: &BootInformation) -> HeapBlock {
     enable_write_protect_bit();
     enable_nxe_bit();
 
@@ -54,13 +49,14 @@ pub(super) fn init(boot_info: &BootInformation) -> () {
     let page = Page::containing_address(0xffff_ff00_0000_0000);
     let frame = frame_allocator.allocate_frame().expect("Out of memory");
     active_page.map_to(page, frame, EntryFlags::WRITABLE, &mut frame_allocator);
-    let node: &mut LinkedAllocatorNode = unsafe { &mut *(page.start_address() as *mut _) };
-
-    *node = LinkedAllocatorNode::new(PAGE_SIZE as usize);
-
-    unsafe { ALLOCATOR.init(node) };
+    // TODO, maybe more pages for heap?
 
     println!("[OK] Linked list allocator initialized!");
+
+    return HeapBlock {
+        start: page.start_address(),
+        size: PAGE_SIZE,
+    };
 }
 
 fn remap_kernel<A: FrameAlloc>(

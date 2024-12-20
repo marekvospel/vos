@@ -1,17 +1,18 @@
 #![no_std]
 #![no_main]
-#![feature(abi_x86_interrupt)]
 #![feature(let_chains)]
 
 extern crate alloc;
 
 use alloc::string::String;
-use multiboot2::{BootInformation, BootInformationHeader};
+use allocator::{LinkedAllocatorNode, LinkedListAllocator};
+use x86lib::X86System;
 
-mod gdt;
-mod memory;
-mod serial;
-mod vga;
+pub mod serial;
+pub mod vga;
+
+#[global_allocator]
+pub(crate) static mut ALLOCATOR: LinkedListAllocator = LinkedListAllocator::new();
 
 #[panic_handler]
 fn panic_handler(info: &core::panic::PanicInfo) -> ! {
@@ -19,18 +20,22 @@ fn panic_handler(info: &core::panic::PanicInfo) -> ! {
     loop {}
 }
 
-#[no_mangle]
-pub extern "C" fn rust_main(multiboot_info_addr: usize) {
-    vga::text::clear_screen();
+pub fn rust_main(system: X86System) {
+    // TODO: move to x64lib
     vga::cursor::set_enabled(false);
+    vga::text::clear_screen();
 
-    println!("Starting VOS...");
+    let heap = system
+        .heap_block()
+        .expect("No heap provided by bootstrap process");
 
-    let boot_info =
-        unsafe { BootInformation::load(multiboot_info_addr as *const BootInformationHeader) }
-            .expect("Error while parsing multiboot header: ");
+    let node = unsafe { &mut *(heap.start as *mut LinkedAllocatorNode) };
+    *node = LinkedAllocatorNode::new(heap.size as usize);
 
-    init(&boot_info);
+    unsafe {
+        #[allow(static_mut_refs)]
+        ALLOCATOR.init(node);
+    }
 
     let str = String::from("Hello world on heap!");
     println!("{}", str);
@@ -38,16 +43,10 @@ pub extern "C" fn rust_main(multiboot_info_addr: usize) {
     loop {}
 }
 
-fn init(boot_info: &BootInformation) -> () {
-    gdt::init_gdt();
-    gdt::init_idt();
-    memory::init(boot_info);
-}
-
 #[macro_export]
 macro_rules! println {
     () => (print!("\n"));
-    ($($arg:tt)*) => (crate::print!("{}\n", format_args!($($arg)*)));
+    ($($arg:tt)*) => ($crate::print!("{}\n", format_args!($($arg)*)));
 }
 
 #[macro_export]

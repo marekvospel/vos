@@ -1,7 +1,10 @@
 [package]
-name = "kernel"
+name = "bootstrap"
 version = "0.1.0"
-edition = "2021"
+edition = "2024"
+
+[lib]
+crate-type = ["staticlib"]
 
 [dependencies]
 bitflags = "2.4.0"
@@ -12,5 +15,6 @@ uart_16550 = "0.3.0"
 x86_64 = "0.15.2"
 
 allocator = { path = "../allocator" }
+kernel = { path = "../libkernel" }
 archlib = { path = "../archlib" }
 x86lib = { path = "../x86lib" }

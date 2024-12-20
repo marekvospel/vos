@@ -1,18 +1,17 @@
+use crate::X86System;
+use archlib::{SetupGDT, SetupInterrupts};
 use lazy_static::lazy_static;
 use x86_64::{
+    VirtAddr,
     instructions::tables::load_tss,
-    registers::segmentation::{Segment, CS},
+    registers::segmentation::{CS, Segment},
     structures::{
         gdt::{Descriptor, GlobalDescriptorTable, SegmentSelector},
-        idt::InterruptDescriptorTable,
         tss::TaskStateSegment,
     },
-    VirtAddr,
 };
 
-use crate::println;
-
-mod interrupt;
+pub(crate) mod interrupts;
 
 lazy_static! {
     static ref TSS: TaskStateSegment = {
@@ -21,7 +20,7 @@ lazy_static! {
             const STACK_SIZE: usize = 4096;
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
-            let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
+            let stack_start = VirtAddr::from_ptr(&raw const STACK);
             let stack_end = stack_start + STACK_SIZE as u64;
 
             stack_end
@@ -46,25 +45,26 @@ struct Selectors {
     tss: SegmentSelector,
 }
 
-static mut IDT: InterruptDescriptorTable = InterruptDescriptorTable::new();
-
-pub(crate) fn init_gdt() {
-    GDT.0.load();
-    unsafe {
-        CS::set_reg(GDT.1.kernel_code);
-        load_tss(GDT.1.tss);
+impl SetupGDT for X86System {
+    unsafe fn setup_gdt(&mut self) {
+        GDT.0.load();
+        unsafe {
+            CS::set_reg(GDT.1.kernel_code);
+            load_tss(GDT.1.tss);
+        }
     }
-    println!("[OK] GDT loaded!");
 }
 
-pub(crate) fn init_idt() {
-    unsafe {
-        IDT.breakpoint.set_handler_fn(interrupt::breakpoint);
-        IDT.page_fault.set_handler_fn(interrupt::page_fault);
-        IDT.double_fault
-            .set_handler_fn(interrupt::double_fault)
-            .set_stack_index(0);
-        IDT.load();
-        println!("[OK] IDT loaded!");
+impl SetupInterrupts for X86System {
+    unsafe fn setup_interrupts(&mut self) {
+        unsafe {
+            let idt = &mut *self.idt();
+            idt.breakpoint.set_handler_fn(interrupts::breakpoint);
+            idt.page_fault.set_handler_fn(interrupts::page_fault);
+            idt.double_fault
+                .set_handler_fn(interrupts::double_fault)
+                .set_stack_index(0);
+            idt.load();
+        }
     }
 }

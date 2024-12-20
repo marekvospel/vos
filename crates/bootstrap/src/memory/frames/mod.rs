@@ -1,7 +1,5 @@
 use core::ops::RangeInclusive;
 
-use alloc::borrow::ToOwned;
-
 use super::PhysicalAddress;
 
 pub mod bump_alloc;
@@ -30,10 +28,8 @@ impl PhysicalFrame {
     }
 
     pub fn within(&self, range: RangeInclusive<u64>) -> bool {
-        return !((range.start().to_owned() > self.start_address()
-            && range.end().to_owned() > self.end_address())
-            || (range.start().to_owned() < self.start_address()
-                && range.end().to_owned() < self.end_address()));
+        return !((*range.start() > self.start_address() && *range.end() > self.end_address())
+            || (*range.start() < self.start_address() && *range.end() < self.end_address()));
     }
 }
 

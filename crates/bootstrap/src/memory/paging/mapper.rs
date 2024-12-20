@@ -3,16 +3,16 @@ use core::ops::{Deref, DerefMut};
 use x86_64::{instructions::tlb, registers::control::Cr3};
 
 use crate::memory::{
+    PhysicalAddress, TABLE_SIZE, VirtualAddress,
     frames::{FrameAlloc, PhysicalFrame},
-    PhysicalAddress, VirtualAddress, TABLE_SIZE,
 };
 
 use super::{
+    Page,
     entry::EntryFlags,
     inactive::InactivePageTable,
     tables::{PageTable, TableLevel4},
     temporary::TemporaryPage,
-    Page,
 };
 
 pub struct Mapper {
@@ -130,7 +130,7 @@ pub struct ActivePageTable {
 impl ActivePageTable {
     pub unsafe fn new() -> Self {
         ActivePageTable {
-            mapper: Mapper::new(),
+            mapper: unsafe { Mapper::new() },
         }
     }
 

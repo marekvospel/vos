@@ -1,5 +1,5 @@
 global long_mode_start
-extern rust_main
+extern arch_main
 
 section .text
 bits 64
@@ -11,7 +11,7 @@ long_mode_start:
     mov fs, ax
     mov gs, ax
 
-    call rust_main
+    call arch_main
 
     ; print `OKAY` to screen
     mov rax, 0x2f592f412f4b2f4f

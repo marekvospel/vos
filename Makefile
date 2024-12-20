@@ -2,7 +2,7 @@ arch		?=	x86_64
 target	?=	$(arch)-custom
 kernel	:=	build/kernel-$(arch).bin
 iso			:=	build/image-$(arch).iso
-rust_kernel	:= target/$(target)/release/libkernel.a
+rust_kernel	:= target/$(target)/release/libbootstrap.a
 
 ld_script	:=	arch/$(arch)/linker.ld
 grub_cfg	:=	arch/$(arch)/grub.cfg
