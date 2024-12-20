@@ -12,6 +12,6 @@ lazy_static = { version = "1.4.0", features = ["spin_no_std"] }
 multiboot2 = { version = "0.19.0", default-features = false }
 spin = "0.9.8"
 uart_16550 = "0.3.0"
-x86_64 = "0.14.11"
+x86_64 = "0.15.2"
 
 allocator = { path = "../allocator" }

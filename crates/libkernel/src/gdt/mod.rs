@@ -22,7 +22,7 @@ lazy_static! {
             static mut STACK: [u8; STACK_SIZE] = [0; STACK_SIZE];
 
             let stack_start = VirtAddr::from_ptr(unsafe { &STACK });
-            let stack_end = stack_start + STACK_SIZE;
+            let stack_end = stack_start + STACK_SIZE as u64;
 
             stack_end
         };
@@ -34,8 +34,8 @@ lazy_static! {
 lazy_static! {
     static ref GDT: (GlobalDescriptorTable, Selectors) = {
         let mut gdt = GlobalDescriptorTable::new();
-        let kernel_code = gdt.add_entry(Descriptor::kernel_code_segment());
-        let tss = gdt.add_entry(Descriptor::tss_segment(&TSS));
+        let kernel_code = gdt.append(Descriptor::kernel_code_segment());
+        let tss = gdt.append(Descriptor::tss_segment(&TSS));
 
         (gdt, Selectors { kernel_code, tss })
     };
